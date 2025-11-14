@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI Sentiment Analysis Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* ---------------------------
+       Theme variables (soft white + blue accent)
+       --------------------------- */
+    :root{
+      --primary: #0ea5e9;       /* light blue accent */
+      --primary-dark: #0284c7;
+      --accent: #60a5fa;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --dark: #0f172a;
+      --muted: #6b7280;
+      --card-border: #e6eef9;
+      --soft-shadow: 0 10px 30px rgba(15,23,42,0.06);
+      --glass-bg: #ffffff;
+    }
+
+    /* base */
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family:'Inter',system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;color:var(--dark);
+      -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+      background-color:#ffffff;
+    }
+
+    /* layout shell */
+    .app-shell{display:flex;min-height:100vh;overflow:hidden}
+
+/* ---------------------------
+   SIDEBAR (sticky, minimal white)
+   --------------------------- */
+    .sidebar {
+      width:84px;
+      background-color: #ffffff;
+      border-right: 1px solid #eef3fb;
+      box-shadow: 4px 0 18px rgba(2,6,23,0.04);
+      position:sticky;
+      top:0;
+      height:100vh;
+      padding-top:18px;
+      z-index:60;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+    }
+
+    .sidebar .brand {
+      width:48px;height:48px;border-radius:12px;
+      background:linear-gradient(135deg,var(--primary),var(--primary-dark));
+      display:flex;align-items:center;justify-content:center;margin-bottom:12px;
+      box-shadow:0 8px 22px rgba(2,6,23,0.06);
+    }
+
+    .nav-list{width:100%}
+    .nav-btn{
+      display:flex;align-items:center;justify-content:center;
+      width:56px;height:56px;margin:8px auto;border-radius:14px;
+      color:var(--dark);cursor:pointer;position:relative;background:transparent;
+      transition:transform .18s ease, box-shadow .18s ease, background .18s ease;
+    }
+    .nav-btn i{font-size:20px}
+    .nav-btn:hover{transform:scale(1.06); background:rgba(14,165,233,0.06)}
+    .nav-btn.active{
+      background:linear-gradient(135deg,var(--primary),var(--primary-dark));
+      color:white;
+      box-shadow:0 8px 28px rgba(2,6,23,0.08);
+    }
+
+    /* ripple effect element inside .nav-btn */
+    .ripple{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:8px;height:8px;border-radius:999px;background:rgba(255,255,255,0.28);opacity:0;pointer-events:none}
+    .ripple.animate{animation:rippleAnim .6s ease-out}
+    @keyframes rippleAnim{0%{opacity:.9;transform:translate(-50%,-50%) scale(.6)}50%{opacity:.4;transform:translate(-50%,-50%) scale(2)}100%{opacity:0;transform:translate(-50%,-50%) scale(4)}}
+
+    /* responsive sidebar adjustments */
+    @media (max-width:980px){
+      .sidebar{width:64px}
+      .nav-btn{width:48px;height:48px}
+    }
+    @media (max-width:800px){
+      .sidebar{display:none}
+    }
+
+    /* ---------------------------
+       MAIN + SECTIONS
+       --------------------------- */
+    .main{flex:1;overflow:auto;background:transparent}
+    .section{
+      min-height:100vh;
+      padding:48px 48px;
+      display:flex;align-items:flex-start;justify-content:center;
+      transition:opacity .35s ease, transform .35s ease;
+      width:100%;
+    }
+    .page{width:100%;max-width:1320px}
+
+    /* visible / hidden states */
+    .section.hidden{opacity:0;pointer-events:none;transform:translateY(10px);position:absolute;left:0;top:0;width:100%}
+    .section.visible{opacity:1;pointer-events:auto;transform:none;position:relative}
+
+    /* card basics */
+    .glass-card {
+      background: var(--glass-bg);
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+      box-shadow: var(--soft-shadow);
+      transition: all 0.28s ease;
+    }
+    .glass-card:hover{transform:translateY(-4px);box-shadow:0 16px 40px rgba(2,6,23,0.06)}
+
+    /* pipeline-specific enlargement */
+    .pipeline-card{
+      padding:24px;border-radius:12px;border:1px solid var(--card-border);
+      background:#ffffff;box-shadow:var(--soft-shadow);
+      display:flex;flex-direction:column;gap:14px;width:100%;
+      min-height:60vh;
+    }
+
+    .pipeline-card .controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:flex-start}
+    .pipeline-card .controls .btn{
+      padding:12px 18px;border-radius:10px;font-weight:700;font-size:0.98rem;
+      box-shadow:0 8px 20px rgba(2,6,23,0.04);
+      border:1px solid rgba(14,165,233,0.06);
+    }
+    .pipeline-card .controls .btn:hover{transform:translateY(-3px)}
+
+    /* progress */
+    .pipeline-card .progress-glass{height:14px;border-radius:12px;padding:4px;background:#f3f7fb;border:1px solid #e6eef9}
+    .pipeline-card .progress-glass .progress-bar{height:8px;border-radius:8px;background:linear-gradient(90deg,var(--primary),var(--accent));box-shadow:inset 0 -2px 6px rgba(0,0,0,0.04);}
+
+    /* logs */
+    .pipeline-card .log-container{
+      background:#fbfdff;border-radius:10px;padding:12px;overflow:auto;border:1px solid #eef6ff;flex:1;
+    }
+    .pipeline-card .log-entry{font-family:monospace;font-size:0.95rem;padding:8px;border-bottom:1px solid rgba(226,232,240,0.6)}
+
+    /* stat cards */
+    .stat-card{border-radius:12px;padding:18px;color:var(--dark);background:#ffffff;box-shadow:var(--soft-shadow);border:1px solid var(--card-border)}
+    .stat-card .display-6{font-size:2.2rem;font-weight:800}
+
+    /* icons */
+    .feature-icon{width:64px;height:64px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;margin-bottom:12px;box-shadow:0 10px 26px rgba(2,6,23,0.06);transition:transform .25s ease, box-shadow .25s ease}
+    .feature-icon:hover{transform:translateY(-6px);box-shadow:0 18px 40px rgba(2,6,23,0.08)}
+
+    /* quick-action tile */
+    .quick-action-btn{background:#ffffff;border-radius:10px;padding:14px;text-align:left;border:1px solid #eef3fb;transition:all .22s ease}
+    .quick-action-btn:hover{transform:translateY(-4px);border-color:var(--primary);box-shadow:0 14px 36px rgba(14,165,233,0.06)}
+
+    /* forecast card */
+    .forecast-card{padding:18px;border-radius:12px;background:#ffffff;border:1px solid var(--card-border);box-shadow:var(--soft-shadow)}
+
+    /* Floating Action Button Modernized */
+    .floating-action {
+      position: fixed;
+      bottom: 28px;
+      right: 32px;
+      z-index: 1000;
+    }
+
+    .fab-btn {
+      width: 58px;
+      height: 58px;
+      border: none;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+      color: #fff;
+      font-size: 20px;
+      box-shadow: 0 10px 25px rgba(2,6,23,0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform .25s ease, box-shadow .25s ease;
+    }
+
+    .fab-btn:hover { transform: scale(1.08); box-shadow: 0 14px 36px rgba(2,6,23,0.12); }
+
+    /* Features section styling */
+    .features-full { display:flex; align-items:center; justify-content:center; min-height:70vh; }
+    .features-card { background: #ffffff; border-radius: 12px; padding: 28px; width:80%; max-width:1100px; box-shadow: var(--soft-shadow); text-align:center; }
+    .features-grid {display:flex;flex-wrap:wrap;gap:18px;justify-content:center;margin-top:18px}
+    .feature-item { display:flex;flex-direction:column;align-items:center; gap:8px; }
+    .feature-item h6, .feature-item small { color: var(--dark); }
+    .feature-icon i { color: #fff; font-size:22px; }
+
+    /* small helpers */
+    .muted { color: #64748b; }
+    .text-white-50 { color: rgba(15,23,42,0.55); }
+    .text-primary { color: var(--primary); }
+
+    /* responsiveness */
+    @media (max-width:720px){
+      .section{padding:28px 18px}
+      .pipeline-card .controls{gap:10px}
+    }
+
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="brand" title="Dashboard">
+        <i class="fas fa-brain" style="color:white;font-size:18px"></i>
+      </div>
+
+      <div class="nav-list">
+        <div class="nav-btn active" data-target="pipeline" title="Pipeline">
+          <i class="fas fa-play"></i>
+          <span class="ripple"></span>
+        </div>
+        <div class="nav-btn" data-target="sentiment" title="Sentiment">
+          <i class="fas fa-chart-pie"></i><span class="ripple"></span>
+        </div>
+        <div class="nav-btn" data-target="forecast" title="Forecast">
+          <i class="fas fa-chart-line"></i><span class="ripple"></span>
+        </div>
+        <div class="nav-btn" data-target="actions" title="Quick Actions">
+          <i class="fas fa-bolt"></i><span class="ripple"></span>
+        </div>
+        <div class="nav-btn" data-target="features" title="Features">
+          <i class="fas fa-star"></i><span class="ripple"></span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+      <!-- HOME / PIPELINE SECTION (visible by default) -->
+      <section id="pipeline" class="section visible">
+        <div class="page">
+
+          <!-- header area -->
+          <div class="row mb-4">
+            <div class="col-12 d-flex justify-content-between align-items-center">
+              <div>
+                <h1 class="h2 fw-bold" style="color:var(--dark)">AI Market Intelligence</h1>
+                <p class="text-muted mb-0">Real-time sentiment analysis across news and social media</p>
+              </div>
+              <div class="metric-badge muted">
+                <i class="fas fa-sync-alt me-1"></i>
+                Last updated: <span id="lastUpdated">Just now</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Stats row -->
+          <div class="row mb-4">
+            <div class="col-xl-3 col-md-6 mb-4">
+              <div class="stat-card total">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <h3 class="display-6">{{ stats.total_records }}</h3>
+                    <p class="mb-0 opacity-90">Total Records</p>
+                  </div>
+                  <div class="feature-icon" style="background:linear-gradient(135deg,#38bdf8,#0ea5e9)">
+                    <i class="fas fa-database" style="color:white;font-size:20px"></i>
+                  </div>
+                </div>
+                <div class="mt-3">
+                  <small class="opacity-90 text-muted"><i class="fas fa-arrow-up me-1"></i>Updated in real-time</small>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 mb-4">
+              <div class="stat-card positive">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <h3 class="display-6">{{ stats.positive_count }}</h3>
+                    <p class="mb-0 opacity-90">Positive</p>
+                  </div>
+                  <div class="feature-icon" style="background:linear-gradient(135deg,#10b981,#059669)">
+                    <i class="fas fa-smile" style="color:white;font-size:20px"></i>
+                  </div>
+                </div>
+                <div class="mt-3">
+                  <small class="opacity-90 text-muted">{{ (stats.positive_count / stats.total_records * 100) | round(1) if stats.total_records > 0 else 0 }}% of total</small>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 mb-4">
+              <div class="stat-card neutral">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <h3 class="display-6">{{ stats.neutral_count }}</h3>
+                    <p class="mb-0 opacity-90">Neutral</p>
+                  </div>
+                  <div class="feature-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)">
+                    <i class="fas fa-meh" style="color:white;font-size:20px"></i>
+                  </div>
+                </div>
+                <div class="mt-3">
+                  <small class="opacity-90 text-muted">{{ (stats.neutral_count / stats.total_records * 100) | round(1) if stats.total_records > 0 else 0 }}% of total</small>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 mb-4">
+              <div class="stat-card negative">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <h3 class="display-6">{{ stats.negative_count }}</h3>
+                    <p class="mb-0 opacity-90">Negative</p>
+                  </div>
+                  <div class="feature-icon" style="background:linear-gradient(135deg,#ef4444,#dc2626)">
+                    <i class="fas fa-frown" style="color:white;font-size:20px"></i>
+                  </div>
+                </div>
+                <div class="mt-3">
+                  <small class="opacity-90 text-muted">{{ (stats.negative_count / stats.total_records * 100) | round(1) if stats.total_records > 0 else 0 }}% of total</small>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pipeline control card -->
+          <div class="pipeline-card mb-4">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <h4 class="fw-bold"><i class="fas fa-play-circle me-2 text-primary" style="color:var(--primary)"></i>Pipeline Control Center</h4>
+                <div class="muted">Run ingestion, sentiment analysis and monitoring</div>
+              </div>
+              <div>
+                <div id="pipelineStatus" class="badge bg-secondary">Stopped</div>
+              </div>
+            </div>
+
+            <div class="controls">
+              <button class="btn" style="background:linear-gradient(90deg,var(--primary),var(--primary-dark));color:white;border:none" onclick="startPipeline()" id="startMainBtn"><i class="fas fa-play me-2"></i>Start Pipeline</button>
+              <button class="btn btn-outline-primary" onclick="runForecast()"><i class="fas fa-chart-line me-2"></i>Run Forecast</button>
+              <button class="btn btn-warning text-white" onclick="testAlert()"><i class="fas fa-bell me-2"></i>Test Alert</button>
+            </div>
+
+            <div class="mb-2">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="muted">Pipeline Progress</div>
+                <div class="fw-bold" id="progressText">0%</div>
+              </div>
+              <div class="progress-glass">
+                <div class="progress" style="height:18px;background:transparent">
+                  <div id="progressBar" class="progress-bar" role="progressbar" style="width:0%"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="log-container" id="pipelineLogs" style="flex:1;">
+              <div class="log-entry text-muted"><i class="fas fa-info-circle me-2"></i>Waiting for pipeline to start...</div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center muted" style="font-size:0.9rem;margin-top:8px">
+              <div>Last updated: <span id="lastUpdatedSmall">—</span></div>
+              <div>Records: <strong id="recordCount">0</strong></div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- SENTIMENT SECTION -->
+      <section id="sentiment" class="section hidden">
+        <div class="page">
+          <div class="glass-card p-4">
+            <h4 class="fw-bold"><i class="fas fa-chart-pie me-2 text-primary" style="color:var(--primary)"></i>Sentiment Analysis</h4>
+            <div class="mt-3">
+              {% if chart_url %}
+                  <img src="{{ chart_url }}" class="img-fluid rounded-3" alt="Sentiment Chart">
+              {% else %}
+                <div class="text-center py-5">
+                  <i class="fas fa-chart-bar fa-4x text-muted mb-3"></i>
+                  <h5 class="text-muted">No Data Available</h5>
+                  <p class="text-muted">Run the pipeline to generate sentiment charts</p>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FORECAST SECTION -->
+      <section id="forecast" class="section hidden">
+        <div class="page">
+          <div class="glass-card p-4">
+            <h4 class="fw-bold"><i class="fas fa-chart-line me-2 text-primary" style="color:var(--primary)"></i>Sentiment Forecast</h4>
+            <div class="mt-3">
+              {% if forecast_plot %}
+                  <img src="{{ forecast_plot }}" class="img-fluid rounded-3" alt="Sentiment Forecast">
+              {% else %}
+                <div class="text-center py-4">
+                  <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                  <h5 class="text-muted">No Forecast Available</h5>
+                  <p class="text-muted mb-3">Run the forecast analysis to predict future sentiment trends</p>
+                  <button class="btn btn-outline-primary" onclick="runForecast()"><i class="fas fa-chart-line me-2"></i>Run Forecast</button>
+                </div>
+              {% endif %}
+            </div>
+
+            <div class="row mt-4">
+              <div class="col-md-6">
+                <div class="d-grid">
+                  <button class="btn btn-outline-primary" onclick="runForecast()"><i class="fas fa-chart-line me-2"></i>Run Forecast Analysis</button>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="progress mt-2">
+                  <div id="forecastProgressBar" class="progress-bar bg-info" role="progressbar" style="width: 0%">0%</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-3">
+              <label>Forecast Logs:</label>
+              <div class="log-container border p-2 bg-light">
+                <div id="forecastLogs"><div class="log-entry text-muted">Forecast analysis not started...</div></div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- ACTIONS (Quick Actions) SECTION -->
+      <section id="actions" class="section hidden">
+        <div class="page">
+          <div class="glass-card p-4">
+            <h4 class="fw-bold"><i class="fas fa-bolt me-2 text-warning"></i>Quick Actions</h4>
+            <div class="row g-3 mt-3">
+              <div class="col-md-6">
+                <a href="/data_view.html" class="quick-action-btn d-flex align-items-center">
+                  <i class="fas fa-table fa-2x me-3" style="font-size:28px"></i>
+                  <div><strong>View Data</strong><div class="text-muted">Open raw CSV data</div></div>
+                </a>
+              </div>
+              <div class="col-md-6">
+                <a href="/export_data" class="quick-action-btn d-flex align-items-center">
+                  <i class="fas fa-download fa-2x me-3" style="font-size:28px"></i>
+                  <div><strong>Export Data</strong><div class="text-muted">Download analyzed CSV</div></div>
+                </a>
+              </div>
+              <div class="col-md-6">
+                <button class="quick-action-btn w-100 d-flex align-items-center border-0" data-bs-toggle="modal" data-bs-target="#configModal">
+                  <i class="fas fa-cog fa-2x me-3" style="font-size:28px"></i>
+                  <div><strong>Configuration</strong><div class="text-muted">Set API keys & queries</div></div>
+                </button>
+              </div>
+              <div class="col-md-6">
+                <button class="quick-action-btn w-100 d-flex align-items-center border-0" onclick="refreshDashboard()">
+                  <i class="fas fa-sync-alt fa-2x me-3" style="font-size:28px"></i>
+                  <div><strong>Refresh</strong><div class="text-muted">Reload dashboard status</div></div>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FEATURES SECTION -->
+      <section id="features" class="section hidden">
+        <div class="page text-center">
+          <h3 class="fw-bold mb-2" style="color:var(--dark)">✨ Features</h3>
+          <p class="text-muted mb-5">Everything your dashboard integrates with — elegant and powerful.</p>
+
+          <div class="row justify-content-center g-4">
+
+            <div class="col-6 col-md-3">
+              <div class="feature-item">
+                <div class="feature-icon" style="background: linear-gradient(135deg, #3b82f6, #06b6d4);">
+                  <i class="fas fa-newspaper"></i>
+                </div>
+                <h6 class="fw-bold">News API</h6>
+                <small class="text-muted">Real-time news analysis</small>
+              </div>
+            </div>
+
+            <div class="col-6 col-md-3">
+              <div class="feature-item">
+                <div class="feature-icon" style="background: linear-gradient(135deg, #f97316, #f59e0b);">
+                  <i class="fab fa-reddit"></i>
+                </div>
+                <h6 class="fw-bold">Reddit</h6>
+                <small class="text-muted">Social sentiment tracking</small>
+              </div>
+            </div>
+
+            <div class="col-6 col-md-3">
+              <div class="feature-item">
+                <div class="feature-icon" style="background: linear-gradient(135deg, #8b5cf6, #6366f1);">
+                  <i class="fas fa-robot"></i>
+                </div>
+                <h6 class="fw-bold">AI Analysis</h6>
+                <small class="text-muted">Gemini AI powered</small>
+              </div>
+            </div>
+
+            <div class="col-6 col-md-3">
+              <div class="feature-item">
+                <div class="feature-icon" style="background: linear-gradient(135deg, #ef4444, #f43f5e);">
+                  <i class="fas fa-bell"></i>
+                </div>
+                <h6 class="fw-bold">Alerts</h6>
+                <small class="text-muted">Slack integration</small>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Floating Action Button -->
+  <div class="floating-action">
+    <button class="fab-btn" data-bs-toggle="modal" data-bs-target="#configModal" title="Configuration">
+      <i class="fas fa-cog"></i>
+    </button>
+  </div>
+
+  <!-- Configuration Modal -->
+  <div class="modal fade" id="configModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title fw-bold"><i class="fas fa-cog me-2 text-primary" style="color:var(--primary)"></i>Configuration Settings</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="configForm">
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label fw-500">Slack Webhook URL</label>
+                  <input type="text" class="form-control" name="slack_webhook" value="{{ config.slack_webhook }}" placeholder="https://hooks.slack.com/services/...">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label fw-500">NewsAPI Key</label>
+                  <input type="password" class="form-control" name="newsapi_key" value="{{ config.newsapi_key }}" placeholder="Your NewsAPI key">
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label fw-500">Reddit Client ID</label>
+                  <input type="text" class="form-control" name="reddit_client_id" value="{{ config.reddit_client_id }}" placeholder="Your Reddit Client ID">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label fw-500">Reddit Client Secret</label>
+                  <input type="password" class="form-control" name="reddit_client_secret" value="{{ config.reddit_client_secret }}" placeholder="Your Reddit Client Secret">
+                </div>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-500">Gemini API Key</label>
+              <input type="password" class="form-control" name="gemini_key" value="{{ config.gemini_key }}" placeholder="Your Gemini API key">
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-500">Search Queries (one per line)</label>
+              <textarea class="form-control" name="queries" rows="3" placeholder="artificial intelligence
+machine learning
+generative AI">{{ "\n".join(config.queries) }}</textarea>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-500">Subreddits (one per line)</label>
+              <textarea class="form-control" name="subreddits" rows="3" placeholder="generativeAI
+MachineLearning
+ArtificialIntelligence">{{ "\n".join(config.subreddits) }}</textarea>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="saveConfig()"><i class="fas fa-save me-2"></i>Save Configuration</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+  /* ---------------------------
+     Section navigation & sidebar behavior
+     --------------------------- */
+  (function(){
+    const navBtns = document.querySelectorAll('.nav-btn');
+    const sections = document.querySelectorAll('.section');
+
+    function setActive(targetId){
+      sections.forEach(s=>{
+        if(s.id === targetId){
+          s.classList.remove('hidden'); s.classList.add('visible');
+        } else {
+          s.classList.remove('visible'); s.classList.add('hidden');
+        }
+      });
+      navBtns.forEach(b=>{
+        if(b.dataset.target === targetId) b.classList.add('active');
+        else b.classList.remove('active');
+      });
+      window.scrollTo({top:0,behavior:'smooth'});
+    }
+
+    navBtns.forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const target = btn.dataset.target;
+        // ripple animation
+        const r = btn.querySelector('.ripple');
+        if(r){ r.classList.remove('animate'); void r.offsetWidth; r.classList.add('animate'); }
+        setActive(target);
+      });
+    });
+
+    // default initial
+    setActive('pipeline');
+  })();
+  </script>
+
+  <!-- YOUR ORIGINAL JS LOGIC (modified: no auto-reload) -->
+  <script>
+    let updateInterval;
+
+    function startPipeline() {
+        fetch('/start_pipeline', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'started') {
+                    showNotification('Pipeline started successfully!', 'success');
+                    startStatusUpdates();
+                } else {
+                    showNotification('Pipeline is already running!', 'warning');
+                }
+            })
+            .catch(error => {
+                showNotification('Failed to start pipeline', 'error');
+            });
+    }
+
+    function runForecast() {
+        fetch('/run_forecast', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                showNotification('Forecast analysis started!', 'info');
+            })
+            .catch(err => {
+                showNotification('Forecast failed to start', 'error');
+            });
+    }
+
+    function testAlert() {
+        fetch('/test_alert', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                showNotification('Test alert sent to Slack!', 'success');
+            })
+            .catch(err => {
+                showNotification('Failed to send test alert', 'error');
+            });
+    }
+
+    function saveConfig() {
+        const formData = new FormData(document.getElementById('configForm'));
+        fetch('/update_config', { method: 'POST', body: formData })
+            .then(response => response.json())
+            .then(data => {
+                showNotification('Configuration saved successfully!', 'success');
+                const configModal = bootstrap.Modal.getInstance(document.getElementById('configModal'));
+                if(configModal) configModal.hide();
+            })
+            .catch(err => {
+                showNotification('Failed to save configuration', 'error');
+            });
+    }
+
+    // refreshDashboard: fetches status once and updates UI (no reload)
+    function refreshDashboard() {
+      fetch('/pipeline_status')
+        .then(response => response.json())
+        .then(data => {
+          // update UI based on the same logic in startStatusUpdates
+          const progressBar = document.getElementById('progressBar');
+          const progressText = document.getElementById('progressText');
+          if(progressBar) progressBar.style.width = (data.progress || 0) + '%';
+          if(progressText) progressText.textContent = (data.progress || 0) + '%';
+
+          const statusBadge = document.getElementById('pipelineStatus');
+          if(statusBadge){
+            statusBadge.className = `badge bg-${data.status === 'running' ? 'primary' : data.status === 'completed' ? 'success' : data.status === 'error' ? 'danger' : 'secondary'}`;
+            statusBadge.textContent = data.status ? (data.status.charAt(0).toUpperCase() + data.status.slice(1)) : statusBadge.textContent;
+          }
+
+          const logsDiv = document.getElementById('pipelineLogs');
+          if (data.logs && data.logs.length > 0 && logsDiv) {
+              logsDiv.innerHTML = data.logs.map(log => {
+                  let icon = 'info-circle';
+                  let className = 'info';
+                  if (log.includes('ERROR')) { icon = 'exclamation-circle'; className = 'error'; }
+                  else if (log.includes('completed') || log.includes('success')) { icon = 'check-circle'; className = 'success'; }
+                  else if (log.includes('warning') || log.includes('WARNING')) { icon = 'exclamation-triangle'; className = 'warning'; }
+                  return `<div class="log-entry ${className}"><i class="fas fa-${icon} me-2"></i>${log}</div>`;
+              }).join('');
+              logsDiv.scrollTop = logsDiv.scrollHeight;
+          }
+
+          if (data.last_run) {
+              const lu = document.getElementById('lastUpdated');
+              const lus = document.getElementById('lastUpdatedSmall');
+              if(lu) lu.textContent = 'Just now';
+              if(lus) lus.textContent = 'Just now';
+          }
+
+          // do not reload page on completion; just stop polling if needed
+        })
+        .catch(error => {
+          console.error('Error fetching status:', error);
+        });
+    }
+
+    function showNotification(message, type) {
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show`;
+        notification.style.position = 'fixed';
+        notification.style.right = '20px';
+        notification.style.top = '20px';
+        notification.style.zIndex = 1100;
+        notification.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.body.appendChild(notification);
+        setTimeout(() => {
+            if (notification.parentNode) notification.remove();
+        }, 5000);
+    }
+
+    function startStatusUpdates() {
+        if (updateInterval) clearInterval(updateInterval);
+
+        updateInterval = setInterval(() => {
+            fetch('/pipeline_status')
+                .then(response => response.json())
+                .then(data => {
+                    const progressBar = document.getElementById('progressBar');
+                    const progressText = document.getElementById('progressText');
+                    if(progressBar) progressBar.style.width = (data.progress || 0) + '%';
+                    if(progressText) progressText.textContent = (data.progress || 0) + '%';
+
+                    const statusBadge = document.getElementById('pipelineStatus');
+                    if(statusBadge){
+                      statusBadge.className = `badge bg-${data.status === 'running' ? 'primary' : data.status === 'completed' ? 'success' : data.status === 'error' ? 'danger' : 'secondary'}`;
+                      statusBadge.textContent = data.status ? (data.status.charAt(0).toUpperCase() + data.status.slice(1)) : statusBadge.textContent;
+                    }
+
+                    const logsDiv = document.getElementById('pipelineLogs');
+                    if (data.logs && data.logs.length > 0 && logsDiv) {
+                        logsDiv.innerHTML = data.logs.map(log => {
+                            let icon = 'info-circle';
+                            let className = 'info';
+                            if (log.includes('ERROR')) { icon = 'exclamation-circle'; className = 'error'; }
+                            else if (log.includes('completed') || log.includes('success')) { icon = 'check-circle'; className = 'success'; }
+                            else if (log.includes('warning') || log.includes('WARNING')) { icon = 'exclamation-triangle'; className = 'warning'; }
+                            return `<div class="log-entry ${className}"><i class="fas fa-${icon} me-2"></i>${log}</div>`;
+                        }).join('');
+                        logsDiv.scrollTop = logsDiv.scrollHeight;
+                    }
+
+                    if (data.last_run) {
+                        const lu = document.getElementById('lastUpdated');
+                        const lus = document.getElementById('lastUpdatedSmall');
+                        if(lu) lu.textContent = 'Just now';
+                        if(lus) lus.textContent = 'Just now';
+                    }
+
+                    if (data.status === 'completed' || data.status === 'error') {
+                        clearInterval(updateInterval);
+                        // Do NOT reload the page anymore. Keep UI updated and allow manual refresh.
+                        showNotification(`Pipeline ${data.status}`, data.status === 'completed' ? 'success' : 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching status:', error);
+                    const cs = document.getElementById('connectionStatus');
+                    if(cs) cs.innerHTML = '<i class="fas fa-circle text-danger me-1"></i>Disconnected';
+                });
+        }, 1500);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        startStatusUpdates();
+
+        const cards = document.querySelectorAll('.glass-card, .pipeline-card');
+        cards.forEach(card => {
+            card.addEventListener('mouseenter', function() { this.style.transform = 'translateY(-5px)'; });
+            card.addEventListener('mouseleave', function() { this.style.transform = 'translateY(0)'; });
+        });
+    });
+  </script>
+</body>
+</html>

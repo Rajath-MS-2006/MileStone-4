@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Sentiment Data - Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #1f2937;
+            --light: #f8fafc;
+        }
+
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .navbar-glass {
+            background: rgba(255, 255, 255, 0.95) !important;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .data-table {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .table th {
+            background: linear-gradient(135deg, var(--primary), #4f46e5);
+            color: white;
+            border: none;
+            font-weight: 600;
+            padding: 15px 12px;
+        }
+
+        .table td {
+            padding: 12px;
+            vertical-align: middle;
+            border-color: #f1f5f9;
+        }
+
+        .table tbody tr:hover {
+            background-color: #f8fafc;
+            transform: translateX(2px);
+            transition: all 0.2s ease;
+        }
+
+        .sentiment-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.8em;
+        }
+
+        .badge-positive {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+        }
+
+        .badge-neutral {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+        }
+
+        .badge-negative {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+        }
+
+        .platform-badge {
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--primary);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 600;
+        }
+
+        .score-indicator {
+            width: 60px;
+            height: 6px;
+            background: #e5e7eb;
+            border-radius: 3px;
+            overflow: hidden;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        .score-fill {
+            height: 100%;
+            border-radius: 3px;
+        }
+
+        .text-preview {
+            max-width: 300px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            cursor: help;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), #4f46e5);
+            border: none;
+            border-radius: 10px;
+            padding: 10px 20px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+        }
+
+        .stats-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .timestamp-cell {
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.85em;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-glass">
+        <div class="container">
+            <a class="navbar-brand fw-bold text-dark" href="/">
+                <i class="fas fa-brain me-2" style="color: var(--primary);"></i>
+                AI Sentiment Dashboard
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a href="/" class="btn btn-primary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="glass-card p-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h1 class="h2 fw-bold text-dark mb-2">
+                                <i class="fas fa-database me-2 text-primary"></i>
+                                Sentiment Data Explorer
+                            </h1>
+                            <p class="text-muted mb-0">
+                                Browse and analyze all AI-related sentiment data collected from NewsAPI and Reddit
+                            </p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <a href="/export_data" class="btn btn-success btn-lg">
+                                <i class="fas fa-download me-2"></i>Export CSV
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="row mb-4">
+            <div class="col-xl-3 col-md-6 mb-3">
+                <div class="stats-card text-center">
+                    <i class="fas fa-table fa-2x text-primary mb-2"></i>
+                    <h3 class="fw-bold">{{ data|length }}</h3>
+                    <p class="text-muted mb-0">Total Records</p>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6 mb-3">
+                <div class="stats-card text-center">
+                    <i class="fas fa-smile fa-2x text-success mb-2"></i>
+                    <h3 class="fw-bold">{{ data|selectattr('label', 'equalto', 'positive')|list|length }}</h3>
+                    <p class="text-muted mb-0">Positive</p>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6 mb-3">
+                <div class="stats-card text-center">
+                    <i class="fas fa-meh fa-2x text-warning mb-2"></i>
+                    <h3 class="fw-bold">{{ data|selectattr('label', 'equalto', 'neutral')|list|length }}</h3>
+                    <p class="text-muted mb-0">Neutral</p>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6 mb-3">
+                <div class="stats-card text-center">
+                    <i class="fas fa-frown fa-2x text-danger mb-2"></i>
+                    <h3 class="fw-bold">{{ data|selectattr('label', 'equalto', 'negative')|list|length }}</h3>
+                    <p class="text-muted mb-0">Negative</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="glass-card p-4">
+            {% if data %}
+            <div class="table-responsive">
+                <table class="table table-hover" id="sentimentTable">
+                    <thead>
+                        <tr>
+                            <th>Platform</th>
+                            <th>Timestamp</th>
+                            <th>Query</th>
+                            <th>Sentiment</th>
+                            <th>Score</th>
+                            <th>Text Preview</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in data %}
+                        <tr>
+                            <td>
+                                <span class="platform-badge">
+                                    <i class="fas fa-{% if row.platform == 'newsapi' %}newspaper{% else %}reddit{% endif %} me-1"></i>
+                                    {{ row.platform }}
+                                </span>
+                            </td>
+                            <td class="timestamp-cell">
+                                <small class="text-muted">
+                                    {% if row.timestamp %}
+                                        {% if row.timestamp is string %}
+                                            {{ row.timestamp[:16] }}
+                                        {% else %}
+                                            {{ row.timestamp.strftime('%Y-%m-%d %H:%M') }}
+                                        {% endif %}
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </small>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark">{{ row.query }}</span>
+                            </td>
+                            <td>
+                                {% if row.label == 'positive' %}
+                                    <span class="sentiment-badge badge-positive">
+                                        <i class="fas fa-smile me-1"></i>Positive
+                                    </span>
+                                {% elif row.label == 'negative' %}
+                                    <span class="sentiment-badge badge-negative">
+                                        <i class="fas fa-frown me-1"></i>Negative
+                                    </span>
+                                {% else %}
+                                    <span class="sentiment-badge badge-neutral">
+                                        <i class="fas fa-meh me-1"></i>Neutral
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="score-indicator">
+                                        <div class="score-fill" style="width: {{ ((row.score + 1) / 2 * 100)|round|int }}%; 
+                                            background: {% if row.label == 'positive' %}#10b981{% elif row.label == 'negative' %}#ef4444{% else %}#f59e0b{% endif %};">
+                                        </div>
+                                    </div>
+                                    <span class="fw-500">{{ "%.2f"|format(row.score|float) }}</span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="text-preview" title="{{ row.text }}">
+                                    {{ row.text[:80] }}{% if row.text|length > 80 %}...{% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                {% if row.url and row.url != 'nan' and row.url != 'None' %}
+                                <a href="{{ row.url }}" target="_blank" class="btn btn-sm btn-outline-primary" title="View Original">
+                                    <i class="fas fa-external-link-alt"></i>
+                                </a>
+                                {% else %}
+                                <span class="text-muted">No URL</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Table Information -->
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="text-muted">
+                        <small>
+                            <i class="fas fa-info-circle me-1"></i>
+                            Showing {{ data|length }} records
+                        </small>
+                    </div>
+                </div>
+                <div class="col-md-6 text-end">
+                    <div class="btn-group">
+                        <button class="btn btn-outline-secondary btn-sm" onclick="sortTable(0)">
+                            <i class="fas fa-sort me-1"></i>Sort by Platform
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="sortTable(3)">
+                            <i class="fas fa-sort me-1"></i>Sort by Sentiment
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {% else %}
+            <!-- Empty State -->
+            <div class="text-center py-5">
+                <i class="fas fa-database fa-4x text-muted mb-3"></i>
+                <h4 class="text-muted">No Data Available</h4>
+                <p class="text-muted mb-4">Run the sentiment analysis pipeline to collect and analyze data</p>
+                <a href="/" class="btn btn-primary">
+                    <i class="fas fa-play me-2"></i>Start Pipeline
+                </a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Data Summary -->
+        {% if data %}
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="glass-card p-4">
+                    <h5 class="fw-bold mb-3">
+                        <i class="fas fa-chart-bar me-2 text-primary"></i>
+                        Data Summary
+                    </h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Platform Distribution</h6>
+                            <ul class="list-unstyled">
+                                <li>
+                                    <i class="fas fa-newspaper me-2 text-info"></i>
+                                    NewsAPI: {{ data|selectattr('platform', 'equalto', 'newsapi')|list|length }} records
+                                </li>
+                                <li>
+                                    <i class="fab fa-reddit me-2 text-danger"></i>
+                                    Reddit: {{ data|selectattr('platform', 'equalto', 'reddit')|list|length }} records
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Sentiment Distribution</h6>
+                            <ul class="list-unstyled">
+                                <li>
+                                    <i class="fas fa-smile me-2 text-success"></i>
+                                    Positive: {{ data|selectattr('label', 'equalto', 'positive')|list|length }} records
+                                </li>
+                                <li>
+                                    <i class="fas fa-meh me-2 text-warning"></i>
+                                    Neutral: {{ data|selectattr('label', 'equalto', 'neutral')|list|length }} records
+                                </li>
+                                <li>
+                                    <i class="fas fa-frown me-2 text-danger"></i>
+                                    Negative: {{ data|selectattr('label', 'equalto', 'negative')|list|length }} records
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Simple table sorting
+        function sortTable(columnIndex) {
+            const table = document.getElementById('sentimentTable');
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            
+            rows.sort((a, b) => {
+                const aText = a.cells[columnIndex].textContent.trim();
+                const bText = b.cells[columnIndex].textContent.trim();
+                return aText.localeCompare(bText);
+            });
+            
+            // Remove existing rows
+            rows.forEach(row => tbody.removeChild(row));
+            
+            // Add sorted rows
+            rows.forEach(row => tbody.appendChild(row));
+        }
+
+        // Add hover effects to text previews
+        document.addEventListener('DOMContentLoaded', function() {
+            const previews = document.querySelectorAll('.text-preview');
+            previews.forEach(preview => {
+                preview.addEventListener('mouseenter', function() {
+                    this.style.whiteSpace = 'normal';
+                    this.style.overflow = 'visible';
+                    this.style.backgroundColor = '#f8f9fa';
+                    this.style.padding = '5px';
+                    this.style.borderRadius = '4px';
+                    this.style.position = 'absolute';
+                    this.style.zIndex = '1000';
+                    this.style.maxWidth = '400px';
+                });
+                
+                preview.addEventListener('mouseleave', function() {
+                    this.style.whiteSpace = 'nowrap';
+                    this.style.overflow = 'hidden';
+                    this.style.backgroundColor = 'transparent';
+                    this.style.padding = '0';
+                    this.style.position = 'static';
+                    this.style.maxWidth = '300px';
+                });
+            });
+        });
+    </script>
+</body>
+</html>
