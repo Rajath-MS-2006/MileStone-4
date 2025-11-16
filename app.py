@@ -24,7 +24,7 @@ load_dotenv()
 # ----------------------------
 # Imports
 # ----------------------------
-from milestone_2 import (
+from data_fetch_and_analyse import (
     fetch_newsapi_articles,
     fetch_reddit_posts,
     analyze_sentiments,
@@ -32,7 +32,7 @@ from milestone_2 import (
     REDDIT_SUBREDDITS,
     send_slack_alert,
 )
-from milestone_3 import load_data, run_prophet_forecast
+from forecast_and_slack import load_data, run_prophet_forecast
 
 # ----------------------------
 # Configuration
@@ -344,3 +344,4 @@ if __name__ == "__main__":
     print("🚀 Starting AI Sentiment Dashboard...")
     print("🌐 Visit: http://localhost:5000")
     app.run(debug=False, use_reloader=False, host="0.0.0.0", port=5000)
+
